@@ -88,6 +88,23 @@ POST /paid/v1/chat/completions    -> Authorization: L402 &lt;token&gt;</pre>
   </section>
 
   <section>
+    <div class="sec-head"><h2>开源实现</h2><span class="idx">Source</span></div>
+    <div class="rule"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:16px"><a href="https://github.com/aronaplana-os/x402-deno">x402-deno</a></h3>
+        <p style="margin:0 0 10px;color:var(--mut);font-size:14px">可直接挂到任意 Deno fetch handler 上的 x402 v2 付费中间件。零依赖，含冒烟测试。</p>
+        <p style="margin:0;font:12px/1.8 var(--mono);color:var(--mut-2)">MIT · Deno KV · EIP-3009 · Base USDC</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:16px">跨实例幂等</h3>
+        <p style="margin:0 0 10px;color:var(--mut);font-size:14px">在推理开始前，用 Deno KV 原子比较并占位 <code>(network, asset, payer, nonce)</code>。签名重放只会取回已缓存的结果，不会二次扣款或二次执行。</p>
+        <p style="margin:0;font:12px/1.8 var(--mono);color:var(--mut-2)">compare-and-set · fail-closed settlement</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <div class="sec-head"><h2>延伸阅读</h2><span class="idx">Notes</span></div>
     <div class="rule"></div>
     <div class="notes">
