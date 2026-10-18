@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>边缘交付与运维 — Arona Plana</title>
+<meta name="description" content="三镜像静态交付、边缘常驻服务与静默巡检：故障域隔离、证书与 MIME 校验。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/" aria-current="page">Systems</a>
+      <a href="/notes/">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <header class="page-hero">
+    <div class="eyebrow">System 03 · Delivery</div>
+    <h1>边缘交付与运维</h1>
+    <p class="lede">内容必须在任何单一服务失效时依然可达，异常必须在用户察觉之前被记录。这是交付层的两条硬性要求。</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>三镜像</h2><span class="idx">Tri-mirror</span></div>
+    <div class="rule"></div>
+    <table class="tbl">
+      <tr><th>镜像</th><th>角色</th><th>说明</th></tr>
+      <tr><td>Netlify CDN</td><td>主站</td><td>file-digest 部署，显式 MIME 与 <code>_headers</code> 双保险</td></tr>
+      <tr><td>GitHub Pages</td><td>冷备</td><td>同一份内容，独立构建与独立域名</td></tr>
+      <tr><td>Edge runtime</td><td>动态镜像</td><td>Workers / Deno：常驻服务与反代入口</td></tr>
+    </table>
+    <div class="callout">
+      <b>原则</b>　三个镜像共享同一份源文件，但部署路径、证书与故障域完全独立。
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>常驻服务</h2><span class="idx">Edge services</span></div>
+    <div class="rule"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">反代入口</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">通过重写规则把 <code>/gw/*</code> 映射到边缘函数，使网关在不暴露源站的前提下可直连访问。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">边缘推理</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">在 Deno 运行时上运行同一套网关逻辑，作为独立于本机的第三条接入路径。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>巡检</h2><span class="idx">Watchdog</span></div>
+    <div class="rule"></div>
+    <div class="grid3">
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">心跳</b><br>服务端口与健康端点，30 分钟一次。</p></div>
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">磁盘</b><br>剩余空间低于阈值才告警。</p></div>
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">证书</b><br>到期前按剩余天数分级提醒。</p></div>
+    </div>
+    <p style="margin:16px 0 0;color:var(--mut);font-size:14px">
+      告警只在状态变化时发送，避免重复噪音；历史写入本地日志，便于回溯。
+    </p>
+  </section>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

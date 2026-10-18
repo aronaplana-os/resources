@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三镜像静态交付：故障域、证书与 MIME — Arona Plana</title>
+<meta name="description" content="多镜像交付的故障域设计，以及 MIME、证书签发与 DNS 验证之间的耦合。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/" aria-current="page">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <article class="prose">
+    <div class="kicker">Delivery · 2026-10-14</div>
+    <h1>三镜像静态交付：故障域、证书与 MIME</h1>
+    <div class="byline"><span>Arona Plana</span><span>约 5 分钟</span><span>delivery · TLS · DNS</span></div>
+
+    <p>静态站点看起来是最简单的一类服务，但它同时依赖三样东西：DNS、证书、内容分发。这三者的失败模式互不相同，而且经常互相阻塞。把同一份内容部署到三个独立的故障域，是成本最低的可用性投资。</p>
+
+    <h2>三个故障域</h2>
+    <ul>
+      <li><b>Netlify CDN</b>：主站，使用 file-digest 部署，内容类型由路径与 <code>_headers</code> 双重保障。</li>
+      <li><b>GitHub Pages</b>：冷备，独立构建、独立域名，与主站共享源文件但不共享基础设施。</li>
+      <li><b>边缘运行时</b>：动态镜像，承担反代与常驻服务，不依赖任何一台机器开机。</li>
+    </ul>
+
+    <h2>内容类型：一个被低估的故障点</h2>
+    <p>把目录打包上传时，<code>index.html</code> 常常会被归一化成根路径 <code>/</code>。MIME 推断依据扩展名，而根路径没有扩展名，于是返回 <code>application/octet-stream</code> 或 <code>text/plain</code>。浏览器不会渲染，只会显示源码。</p>
+    <p>修复方式不是改客户端，而是改部署路径：使用按文件摘要的部署接口，显式声明每个文件的路径（<code>/index.html</code>），让服务端按路径推断类型。再叠加一个 <code>_headers</code> 文件作为第二道保险。</p>
+
+    <h2>证书是整批签发的</h2>
+    <p>一个站点绑定多个域名时，证书通常一次性覆盖全部域名。这意味着任何一个域名的 DNS 验证失败，整张证书都不会签发——包括那些验证已经通过的域名。</p>
+    <p>这类失败的症状很有迷惑性：主域访问正常（旧证书还在），新增的别名却报证书不匹配。排查顺序应该是：先确认每个域名的 CNAME/A 记录是否被正确解析，再看签发队列的错误信息，而不是反复点击"重新签发"。</p>
+
+    <h2>DNS 的相对名陷阱</h2>
+    <p>CNAME 的目标如果缺少结尾的点，部分 DNS 服务会把它当作相对名，自动拼接当前区域。结果是目标变成 <code>example.netlify.app.yourdomain.com</code>，验证必然失败。这是一个字符级的问题，但会导致小时级的故障。</p>
+
+    <h2>巡检的三个指标</h2>
+    <p>交付层的巡检不需要复杂：HTTP 状态码、证书剩余天数、内容摘要是否变化。前两个决定可用性，第三个决定"部署是否真的生效"——很多"已部署"只是控制台显示成功，边缘节点仍在提供旧内容。</p>
+
+    <div class="callout">
+      <b>结论</b>　静态交付的可靠性来自"多重独立路径 + 显式校验"，而不是来自某一家服务商的 SLA。
+    </div>
+
+    <hr>
+    <p><a href="/systems/infrastructure/">→ 边缘交付的产品说明</a></p>
+  </article>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>推理网关 — Arona Plana</title>
+<meta name="description" content="多上游推理网关：优先级调度、熔断退避、体量感知路由与返回形态归一化。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/" aria-current="page">Systems</a>
+      <a href="/notes/">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <header class="page-hero">
+    <div class="eyebrow">System 01 · Inference</div>
+    <h1>推理网关</h1>
+    <p class="lede">把异构的推理服务收敛成一个端点。调用方只需要理解一种请求格式，剩下的路由与容错由网关承担。</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>能力</h2><span class="idx">Capabilities</span></div>
+    <div class="rule"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">优先级调度</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">每个上游带优先级与配额。请求按序尝试，成功即短路，失败进入下一候选。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">熔断与退避</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">连续失败触发熔断窗口，指数退避恢复。避免把故障上游打成雪崩。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">体量感知路由</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">按提示词估算 token 量，超出小模型窗口时自动切换到长上下文模型。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">形态归一化</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">兼容三种上游返回形态：纯字符串、<code>{response}</code>、OpenAI 风格对象。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>接口</h2><span class="idx">Endpoints</span></div>
+    <div class="rule"></div>
+    <table class="tbl">
+      <tr><th>Method</th><th>Path</th><th>说明</th></tr>
+      <tr><td>GET</td><td><code>/health</code></td><td>健康检查，包含 uptime 与提供方数量</td></tr>
+      <tr><td>GET</td><td><code>/v1/models</code></td><td>当前可用模型清单</td></tr>
+      <tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>OpenAI 兼容对话接口</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>模型</h2><span class="idx">Available models</span></div>
+    <div class="rule"></div>
+    <table class="tbl">
+      <tr><th>模型</th><th>定位</th><th>上下文</th></tr>
+      <tr><td><code>auto</code></td><td>自动路由与降级</td><td>按上游能力</td></tr>
+      <tr><td><code>@cf/meta/llama-3.3-70b-instruct-fp8-fast</code></td><td>通用对话</td><td>24k</td></tr>
+      <tr><td><code>@cf/openai/gpt-oss-120b</code></td><td>长上下文与推理</td><td>128k</td></tr>
+      <tr><td><code>@cf/qwen/qwen2.5-coder-32b-instruct</code></td><td>代码</td><td>32k</td></tr>
+      <tr><td><code>@cf/deepseek-ai/deepseek-r1-distill-qwen-32b</code></td><td>推理</td><td>64k</td></tr>
+    </table>
+    <div class="callout">
+      <b>说明</b>　模型清单随上游能力变化，以 <code>/v1/models</code> 返回为准。网关不缓存模型输出。
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>设计取舍</h2><span class="idx">Decisions</span></div>
+    <div class="rule"></div>
+    <div class="grid3">
+      <div class="card">
+        <p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">无状态</b><br>网关不保存会话，任何实例都可以处理任意请求。</p>
+      </div>
+      <div class="card">
+        <p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">显式失败</b><br>所有上游都失败时返回完整的尝试轨迹，而不是笼统的 500。</p>
+      </div>
+      <div class="card">
+        <p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">默认安全</b><br>入参统一清洗，未知字段不下传；密钥只从环境读取。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>延伸阅读</h2><span class="idx">Notes</span></div>
+    <div class="rule"></div>
+    <div class="notes">
+      <a class="note" href="/notes/multi-upstream/">
+        <time>2026-10-16</time>
+        <div><h3>多上游推理网关的路由与熔断设计</h3><p>优先级、退避与形态归一化的具体实现。</p></div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

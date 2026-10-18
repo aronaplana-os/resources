@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多上游推理网关的路由与熔断 — Arona Plana</title>
+<meta name="description" content="优先级队列、熔断参数、返回形态归一化与流式定界的实现说明。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/" aria-current="page">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <article class="prose">
+    <div class="kicker">Inference · 2026-10-16</div>
+    <h1>多上游推理网关的路由与熔断设计</h1>
+    <div class="byline"><span>Arona Plana</span><span>约 5 分钟</span><span>routing · circuit breaker · normalization</span></div>
+
+    <p>把多家推理服务聚合成一个端点，难点不在调用，而在"失败时的行为"。上游的失败模式各不相同：超时、配额耗尽、参数不兼容、上下文溢出。网关必须把这些差异收敛成调用方能理解的行为。</p>
+
+    <h2>候选链的构造</h2>
+    <p>每次请求先构造候选链，而不是在代码里写死 if/else。链的构造规则：</p>
+    <ul>
+      <li>显式模型名：只尝试该模型，失败即返回错误。</li>
+      <li><code>auto</code>：按优先级枚举所有健康上游，按提示词体量决定首选。</li>
+      <li>大提示词（估算 token 超过阈值）：跳过小上下文模型，直接进入长上下文候选。</li>
+    </ul>
+    <p>候选链是一次性对象，不缓存。这样上游的健康状态变化可以在下一次请求中立刻生效。</p>
+
+    <h2>熔断的三个参数</h2>
+    <p>熔断器只保留三个参数：失败阈值、冷却窗口、半开探测。连续失败达到阈值后进入冷却，冷却期内直接跳过该上游；冷却结束时放行一个探测请求，成功则关闭熔断，失败则重新计时。</p>
+    <p>关键点是<b>失败要分类</b>。参数不兼容（4xx）不应该计入熔断，因为换上游就能解决；而超时与 5xx 才代表上游本身不可用。把这两类混在一起，会让一个参数问题触发全量熔断。</p>
+
+    <h2>形态归一化</h2>
+    <p>异构上游的返回形态至少有三种：</p>
+    <pre><code>// 1. 纯字符串
+"hello"
+
+// 2. 包装对象
+{ "response": "hello", "usage": {...} }
+
+// 3. OpenAI 风格
+{ "choices": [{ "message": { "content": "hello", "reasoning": "..." } }] }</code></pre>
+    <p>归一化函数按顺序探测：字符串直接用；有 <code>response</code> 字段取之；有 <code>choices[0].message</code> 则取 <code>content</code>，为空时回退到推理字段。第三种形态在推理模型上很常见——如果只读 <code>content</code>，会得到空字符串，看起来像模型返回了空回复。</p>
+
+    <h2>流式与定界</h2>
+    <p>伪流式实现最容易忽略的一点是响应定界。HTTP/1.1 的 keep-alive 连接上，如果没有 <code>Content-Length</code> 也没有 <code>Transfer-Encoding: chunked</code>，客户端无法判断响应体何时结束，只能等待连接关闭——而 keep-alive 下连接不会关。正确做法是显式声明 <code>Connection: close</code>，用连接关闭作为定界符。</p>
+
+    <h2>入参清洗</h2>
+    <p>客户端永远会发送上游不认识的东西。典型例子是推理强度参数（<code>reasoning_effort</code>），部分上游会直接拒绝未知字段。网关在转发前统一剥离一组已知的不兼容参数，并允许按上游覆盖该列表。</p>
+
+    <div class="callout">
+      <b>经验</b>　网关作为统一出口，必须同时承担两件事：能力路由与协议适配。只做其一，都会把上游的差异泄漏给调用方。
+    </div>
+
+    <hr>
+    <p><a href="/systems/gateway/">→ 推理网关的产品说明</a></p>
+  </article>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

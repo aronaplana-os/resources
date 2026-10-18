@@ -3,262 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Arona Plana — Network · Infrastructure · Autonomous Systems</title>
-<meta name="description" content="Arona Plana 的技术手记：边缘计算、多上游推理网关、支付轨道与自动化巡检。关于把免费额度、脚本与常开机器拼成自有基础设施的实践记录。">
+<title>Arona Plana — 为智能体与人构建可靠的 AI 基础设施</title>
+<meta name="description" content="Arona Plana 设计并运营推理网关、机器可支付接口与边缘交付管线。以工程约束为第一原则：可观测、可恢复、可组合。">
 <meta name="theme-color" content="#0a0b0e">
-<style>
-/* ------------------------------------------------------------------
-   Arona Plana — editorial tech notebook
-   design: dark-first, typography-led, hairline grid, no external assets
-------------------------------------------------------------------- */
-:root{
-  --bg:#0a0b0e;
-  --bg-soft:#0e1015;
-  --panel:rgba(255,255,255,.025);
-  --panel-hi:rgba(255,255,255,.045);
-  --line:rgba(255,255,255,.075);
-  --line-soft:rgba(255,255,255,.045);
-  --fg:#eceef2;
-  --fg-dim:#b7bcc8;
-  --mut:#7c8291;
-  --mut-2:#5a606d;
-  --acc:#9db8ff;
-  --acc-ink:#0a0b0e;
-  --acc-2:#7ee2b8;
-  --warn:#e8c07a;
-  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
-  --serif:"Iowan Old Style","Source Serif Pro",Georgia,"Songti SC","Noto Serif CJK SC",serif;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-  --r:16px;
-  --max:1040px;
-}
-@media (prefers-color-scheme: light){
-  :root{
-    --bg:#f6f6f4; --bg-soft:#fbfbfa;
-    --panel:rgba(15,18,24,.025); --panel-hi:rgba(15,18,24,.045);
-    --line:rgba(15,18,24,.10); --line-soft:rgba(15,18,24,.06);
-    --fg:#15181f; --fg-dim:#3c4250; --mut:#666d7c; --mut-2:#8a909c;
-    --acc:#2f5bd7; --acc-ink:#ffffff; --acc-2:#0e8f63; --warn:#9a6b14;
-  }
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-::selection{background:color-mix(in srgb,var(--acc) 28%,transparent);color:var(--fg)}
-body{
-  margin:0;
-  background:
-    radial-gradient(1100px 520px at 50% -160px, color-mix(in srgb,var(--acc) 13%,transparent), transparent 62%),
-    radial-gradient(700px 380px at 100% 0%, color-mix(in srgb,var(--acc-2) 7%,transparent), transparent 60%),
-    var(--bg);
-  color:var(--fg);
-  font:15.5px/1.78 var(--sans);
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-  letter-spacing:.005em;
-}
-a{color:var(--acc);text-decoration:none}
-a:hover{color:color-mix(in srgb,var(--acc) 82%,var(--fg))}
-a:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:6px}
-
-.shell{max-width:var(--max);margin:0 auto;padding:34px 26px 96px}
-
-/* ---------- top bar ---------- */
-.top{
-  display:flex;align-items:center;justify-content:space-between;gap:18px;
-  padding-bottom:22px;border-bottom:1px solid var(--line-soft);
-}
-.brand{display:flex;align-items:center;gap:13px;min-width:0}
-.monogram{
-  width:38px;height:38px;border-radius:11px;flex:0 0 auto;
-  display:grid;place-items:center;
-  font:600 13px/1 var(--mono);letter-spacing:.02em;
-  color:var(--acc-ink);
-  background:linear-gradient(150deg,var(--acc),var(--acc-2));
-  box-shadow:0 10px 30px -12px color-mix(in srgb,var(--acc) 55%,transparent);
-}
-.brand b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
-.brand span{display:block;font:11.5px/1.5 var(--mono);color:var(--mut);letter-spacing:.02em}
-.nav{display:flex;gap:6px;flex-wrap:wrap}
-.nav a{
-  font:12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
-  color:var(--mut);padding:8px 11px;border-radius:8px;border:1px solid transparent;
-  transition:color .18s,border-color .18s,background .18s;
-}
-.nav a:hover{color:var(--fg);border-color:var(--line);background:var(--panel);text-decoration:none}
-
-.status{
-  display:inline-flex;align-items:center;gap:8px;
-  font:11.5px/1 var(--mono);color:var(--mut);
-  border:1px solid var(--line);border-radius:999px;padding:7px 12px;
-  background:var(--panel);
-}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--acc-2);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc-2) 16%,transparent)}
-
-/* ---------- hero ---------- */
-.hero{padding:64px 0 44px;display:grid;grid-template-columns:1.55fr .8fr;gap:48px;align-items:end}
-@media (max-width:840px){ .hero{grid-template-columns:1fr;gap:28px;padding:44px 0 30px} }
-.eyebrow{
-  font:11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--mut-2);
-  display:flex;align-items:center;gap:10px;margin-bottom:18px;
-}
-.eyebrow::before{content:"";width:26px;height:1px;background:var(--line);display:block}
-h1{
-  font-family:var(--serif);
-  font-size:clamp(30px,4.6vw,46px);line-height:1.18;letter-spacing:-.02em;
-  font-weight:600;margin:0 0 20px;text-wrap:balance;
-}
-h1 em{font-style:normal;color:var(--acc)}
-.lede{color:var(--fg-dim);font-size:16px;max-width:62ch;margin:0 0 26px}
-.lede b{color:var(--fg);font-weight:600}
-
-.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:var(--r);overflow:hidden}
-.meta-grid div{background:var(--bg);padding:16px 18px}
-.meta-grid b{display:block;font:600 20px/1.1 var(--mono);letter-spacing:-.02em;margin-bottom:6px}
-.meta-grid span{font:11.5px/1.5 var(--mono);color:var(--mut);letter-spacing:.04em;text-transform:uppercase}
-
-/* ---------- section frame ---------- */
-section{margin-top:74px}
-.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;margin-bottom:22px}
-.sec-head h2{
-  font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.015em;margin:0;
-}
-.sec-head .idx{font:11.5px/1 var(--mono);color:var(--mut-2);letter-spacing:.18em;text-transform:uppercase}
-.rule{height:1px;background:var(--line-soft);margin:0 0 22px}
-
-/* ---------- notes ---------- */
-.notes{display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:var(--r);overflow:hidden}
-.note{
-  display:grid;grid-template-columns:112px 1fr 18px;gap:22px;align-items:start;
-  padding:20px 22px;background:var(--bg);transition:background .18s;
-}
-.note:hover{background:var(--bg-soft);text-decoration:none}
-.note:hover .arrow{transform:translateX(3px);color:var(--acc)}
-.note time{font:11.5px/1.9 var(--mono);color:var(--mut-2);letter-spacing:.02em;padding-top:3px}
-.note h3{margin:0 0 7px;font-size:16.5px;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
-.note p{margin:0;color:var(--mut);font-size:14px}
-.note p code{font:12.5px/1 var(--mono);color:var(--fg-dim)}
-.arrow{color:var(--mut-2);transition:transform .18s,color .18s;align-self:center;font-size:15px}
-@media (max-width:680px){
-  .note{grid-template-columns:1fr;gap:8px}
-  .note time{padding:0}
-  .arrow{display:none}
-}
-
-/* ---------- systems ---------- */
-.systems{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media (max-width:800px){ .systems{grid-template-columns:1fr} }
-.sys{
-  position:relative;border:1px solid var(--line);border-radius:var(--r);
-  background:linear-gradient(180deg,var(--panel-hi),var(--panel));
-  padding:22px 22px 20px;overflow:hidden;
-  transition:border-color .2s,transform .2s;
-}
-.sys:hover{border-color:color-mix(in srgb,var(--acc) 40%,var(--line));transform:translateY(-2px)}
-.sys .no{position:absolute;top:16px;right:18px;font:11px/1 var(--mono);color:var(--mut-2);letter-spacing:.12em}
-.sys h3{margin:0 0 4px;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
-.sys .en{font:11px/1.6 var(--mono);color:var(--mut-2);letter-spacing:.06em;text-transform:uppercase;margin:0 0 12px}
-.sys p{margin:0 0 14px;color:var(--mut);font-size:14px}
-.sys p b{color:var(--fg-dim);font-weight:600}
-.stack{display:flex;flex-wrap:wrap;gap:6px}
-.stack span{
-  font:10.5px/1 var(--mono);letter-spacing:.05em;color:var(--mut);
-  border:1px solid var(--line-soft);border-radius:6px;padding:5px 8px;background:var(--bg-soft);
-}
-
-/* ---------- now ---------- */
-.now{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-@media (max-width:800px){ .now{grid-template-columns:1fr} }
-.now .card{
-  border:1px solid var(--line);border-radius:var(--r);padding:20px;
-  background:var(--panel);
-}
-.now h3{margin:0 0 8px;font:11.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--mut-2);font-weight:500}
-.now p{margin:0;font-size:14px;color:var(--fg-dim)}
-.now p + p{margin-top:8px;color:var(--mut);font-size:13.5px}
-.now code{font:12.5px/1 var(--mono);color:var(--acc-2)}
-
-/* ---------- colophon ---------- */
-.kv{display:grid;grid-template-columns:150px 1fr;gap:12px 26px;font-size:14px}
-.kv dt{font:11.5px/1.7 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut-2);padding-top:2px}
-.kv dd{margin:0;color:var(--fg-dim)}
-.kv dd b{color:var(--fg);font-weight:600}
-@media (max-width:620px){ .kv{grid-template-columns:1fr;gap:4px 0} .kv dd{margin-bottom:12px} }
-
-/* ---------- contact ---------- */
-.contact{display:flex;flex-wrap:wrap;gap:10px}
-.contact a{
-  display:inline-flex;align-items:center;gap:9px;
-  border:1px solid var(--line);border-radius:10px;padding:11px 14px;
-  font:12.5px/1 var(--mono);color:var(--fg-dim);background:var(--panel);
-  transition:border-color .18s,color .18s,background .18s;
-}
-.contact a:hover{color:var(--fg);border-color:color-mix(in srgb,var(--acc) 45%,var(--line));background:var(--panel-hi);text-decoration:none}
-.contact .k{color:var(--mut-2);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase}
-.pay{
-  margin-top:16px;border:1px solid var(--line-soft);border-radius:12px;background:var(--bg-soft);
-  padding:16px 18px;display:grid;gap:8px;
-}
-.pay .row{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:baseline}
-.pay .row span.k{font:10.5px/1.6 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut-2)}
-.pay .row code{font:12px/1.7 var(--mono);color:var(--fg-dim);word-break:break-all;user-select:all}
-@media (max-width:620px){ .pay .row{grid-template-columns:1fr;gap:2px} }
-
-/* ---------- footer ---------- */
-footer{
-  margin-top:88px;padding-top:26px;border-top:1px solid var(--line-soft);
-  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
-  font:11.5px/1.8 var(--mono);color:var(--mut-2);letter-spacing:.03em;
-}
-footer .alt{display:flex;gap:16px;flex-wrap:wrap}
-footer a{color:var(--mut)}
-
-/* ---------- motion ---------- */
-@media (prefers-reduced-motion:no-preference){
-  .hero,.note,.sys{animation:rise .5s cubic-bezier(.22,.8,.3,1) both}
-  .note:nth-child(2){animation-delay:.04s}
-  .note:nth-child(3){animation-delay:.08s}
-  .note:nth-child(4){animation-delay:.12s}
-  .note:nth-child(5){animation-delay:.16s}
-  .note:nth-child(6){animation-delay:.2s}
-  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-}
-</style>
+<link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<div class="shell">
+<div class="wrap">
 
-  <!-- top -->
   <div class="top">
-    <div class="brand">
+    <a class="brand" href="/">
       <div class="monogram">AP</div>
-      <div>
-        <b>Arona Plana</b>
-        <span>network · infrastructure · autonomous systems</span>
-      </div>
-    </div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
     <nav class="nav">
-      <a href="#notes">Notes</a>
-      <a href="#systems">Systems</a>
-      <a href="#now">Now</a>
-      <a href="#colophon">Colophon</a>
-      <a href="#contact">Contact</a>
+      <a href="/" aria-current="page">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
     </nav>
   </div>
 
-  <!-- hero -->
   <header class="hero">
     <div>
-      <div class="eyebrow">Field notes on building your own infrastructure</div>
-      <h1>把免费的额度、几行脚本和一台常开的机器，<em>拼成一套自己的基础设施</em>。</h1>
+      <div class="eyebrow">Arona Plana · infrastructure &amp; AI systems</div>
+      <h1>为智能体与人，构建<em>可靠的 AI 基础设施</em>。</h1>
       <p class="lede">
-        我是 Arona Plana。这里记录<strong>边缘计算、多上游推理网关、机器可支付接口与自动化巡检</strong>的工程实践——
-        不追逐框架，只关心一件事：<strong>系统在无人值守时，是否依然可靠、可观测、可恢复</strong>。
+        Arona Plana 设计并运营推理网关、机器可支付接口与边缘交付管线。
+        我们关心工程约束下的可靠性：<b>可观测、可恢复、可组合</b>——
+        而不是在演示里跑通一次。
       </p>
       <div class="meta-grid">
-        <div><b>3</b><span>public edge entries</span></div>
-        <div><b>2</b><span>payment rails</span></div>
-        <div><b>20,856</b><span>discoverable x402 services</span></div>
-        <div><b>30 min</b><span>watchdog interval</span></div>
+        <div><b>3</b><span>products in production</span></div>
+        <div><b>2</b><span>settlement rails</span></div>
+        <div><b>3</b><span>edge mirrors</span></div>
+        <div><b>24/7</b><span>watchdog</span></div>
       </div>
     </div>
     <div>
@@ -271,65 +51,94 @@ footer a{color:var(--mut)}
     </div>
   </header>
 
-  <!-- notes -->
-  <section id="notes">
+  <section>
+    <div class="sec-head">
+      <h2>产品</h2>
+      <span class="idx">Products</span>
+    </div>
+    <div class="rule"></div>
+    <div class="products">
+
+      <a class="product" href="/systems/gateway/">
+        <span class="no">01</span>
+        <h3>推理网关</h3>
+        <p class="en">Multi-upstream inference gateway</p>
+        <p>统一的推理接入层。多上游优先级调度、指数退避熔断、按上下文体量路由，并对不同上游做请求与响应的形态归一化。</p>
+        <span class="go">Explore →</span>
+      </a>
+
+      <a class="product" href="/systems/payments/">
+        <span class="no">02</span>
+        <h3>机器可支付接口</h3>
+        <p class="en">Machine-payable API · x402 / L402</p>
+        <p>让没有账户与法务身份的软件也能完成结算。两条轨道并行：链上稳定币的 x402，与闪电网络的 L402。</p>
+        <span class="go">Explore →</span>
+      </a>
+
+      <a class="product" href="/systems/infrastructure/">
+        <span class="no">03</span>
+        <h3>边缘交付</h3>
+        <p class="en">Edge delivery &amp; operations</p>
+        <p>三镜像静态交付与边缘常驻服务：故障域隔离、显式 MIME、证书与 DNS 的自动化校验，以及静默巡检。</p>
+        <span class="go">Explore →</span>
+      </a>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>工作方式</h2>
+      <span class="idx">Principles</span>
+    </div>
+    <div class="rule"></div>
+    <div class="grid3">
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">约束优先</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">先定义不可妥协的边界：请求体上限、上下文窗口、结算终局性。系统围绕约束设计，而不是让约束成为事故。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">可观测优先</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">每个组件都要能回答三个问题：是否在运行、是否在变慢、如果失败会留下什么证据。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:15.5px">组合优于重写</h3>
+        <p style="margin:0;color:var(--mut);font-size:14px">用最小的、可替换的部件拼装系统。每个部件都能独立部署、独立验证、独立替换。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <div class="sec-head">
       <h2>手记</h2>
-      <span class="idx">Notes / 06</span>
+      <span class="idx"><a class="more" href="/notes/">All notes →</a></span>
     </div>
     <div class="rule"></div>
     <div class="notes">
 
-      <a class="note" href="#">
+      <a class="note" href="/notes/x402-l402/">
         <time>2026-10-18</time>
         <div>
-          <h3>机器可支付的接口：用 x402 与 L402 把推理变成按次结算</h3>
-          <p>没有账号、没有卡、没有 KYC——一个只有钱包的智能体如何购买推理。实现走了两条轨：<code>x402</code>（Base 主网 USDC，EIP-3009 授权签名 + facilitator 校验与链上结算）与 <code>L402</code>（BOLT11 发票 + HMAC 配额令牌）。关键发现：LNURL-pay 的 <code>verify</code> 字段让"开票 + 核销"全程无需鉴权。</p>
+          <h3>为智能体设计支付：x402 与 L402 的工程取舍</h3>
+          <p>两条结算轨道的能力边界、验证模型，以及为什么"支付即授权"比"账户即授权"更适合机器对手方。</p>
         </div>
         <span class="arrow">→</span>
       </a>
 
-      <a class="note" href="#">
-        <time>2026-10-17</time>
-        <div>
-          <h3>第三条腿：在边缘运行时上再部署一个不做冷启动的网关</h3>
-          <p>当一台会关机的机器和一条反代链路都不够用时，第三个独立入口的意义在于<b>故障域隔离</b>。记录两类只有真做才会遇到的坑：控制台的"已保存"与运行时的环境变量并不等价；以及面板抽屉如何静默吃掉发布按钮的点击。</p>
-        </div>
-        <span class="arrow">→</span>
-      </a>
-
-      <a class="note" href="#">
+      <a class="note" href="/notes/multi-upstream/">
         <time>2026-10-16</time>
         <div>
-          <h3>多上游自适应推理网关：优先级调度、熔断与按上下文路由</h3>
-          <p>把多家免费额度串成一条稳定的推理链：优先级队列、指数退避熔断、按提示词体量自动切换模型、入参清洗（客户端永远会发上游不认识的东西）。三个必修 bug：参数直通、上下文错配、以及 SSE 在 keep-alive 下的定界缺失。</p>
+          <h3>多上游推理网关的路由与熔断设计</h3>
+          <p>优先级队列、退避策略、按提示词体量的模型选择，以及把异构上游的返回形态归一化的三种模式。</p>
         </div>
         <span class="arrow">→</span>
       </a>
 
-      <a class="note" href="#">
-        <time>2026-10-15</time>
-        <div>
-          <h3>零成本常驻：把服务放到边缘函数上，并让它永远醒着</h3>
-          <p>十万请求/天的免费额度可以承载什么、Workers AI 的两种接入方式（绑定 vs REST 兜底）、以及为什么最终选择 REST：绑定让代码更短，兜底让部署更自由。</p>
-        </div>
-        <span class="arrow">→</span>
-      </a>
-
-      <a class="note" href="#">
+      <a class="note" href="/notes/edge-delivery/">
         <time>2026-10-14</time>
         <div>
-          <h3>并行可用性探测与出口择优：一个可反复运行的节点筛选器</h3>
-          <p>从数千条订阅中解析出可握手的端点，批量并行探测，采集出口地理与 ASN 指纹，再用六站点可达性矩阵打分排序。核心约束：探测过程不得干扰生产链路（独立端口基址 + 独立进程）。</p>
-        </div>
-        <span class="arrow">→</span>
-      </a>
-
-      <a class="note" href="#">
-        <time>2026-10-13</time>
-        <div>
-          <h3>证书、CNAME 与那 14 小时：一个尾点引发的连坐故障</h3>
-          <p>一个缺少尾点的 CNAME 被 DNS 当作相对名拼接，导致域名验证失败；而证书是整批签发的——一个域失败，整张证书都不发。顺带记录了 DoH 如何在浏览器层救活一个被解析阻断的邮箱，以及反代为什么比边缘函数更适合做"国内入口"。</p>
+          <h3>三镜像静态交付：故障域、证书与 MIME</h3>
+          <p>为什么同一个站点要部署到三个故障域，以及内容类型、证书签发与 DNS 验证之间的耦合关系。</p>
         </div>
         <span class="arrow">→</span>
       </a>
@@ -337,122 +146,28 @@ footer a{color:var(--mut)}
     </div>
   </section>
 
-  <!-- systems -->
-  <section id="systems">
+  <section>
     <div class="sec-head">
-      <h2>系统</h2>
-      <span class="idx">Systems / 04</span>
+      <h2>关于</h2>
+      <span class="idx"><a class="more" href="/about/">About →</a></span>
     </div>
     <div class="rule"></div>
-    <div class="systems">
-
-      <div class="sys">
-        <span class="no">01</span>
-        <h3>多上游推理网关</h3>
-        <p class="en">Multi-upstream inference gateway</p>
-        <p>面向 Agent 的统一推理层：<b>优先级调度</b>、<b>指数退避熔断</b>、<b>提示词体量感知的模型路由</b>，并对不同上游做参数与响应形态归一化（字符串 / <code>{response}</code> / OpenAI 兼容对象三种返回形态）。对外暴露免费层、L402 与 x402 三条计费轨。</p>
-        <div class="stack"><span>Python stdlib</span><span>Deno Deploy</span><span>CF Workers AI</span><span>HMAC tokens</span></div>
-      </div>
-
-      <div class="sys">
-        <span class="no">02</span>
-        <h3>机器可支付接口</h3>
-        <p class="en">Machine-payable API · x402 / L402</p>
-        <p>让没有法务身份的软件也能付费：<b>x402</b> 走 USDC on Base（EIP-3009 授权、facilitator 校验与结算），<b>L402</b> 走闪电网络（BOLT11 发票、无状态 HMAC 配额令牌）。402 响应携带 <b>Bazaar 发现元数据</b>，可被其他 Agent 自动索引与定价。</p>
-        <div class="stack"><span>x402 v2</span><span>PayAI facilitator</span><span>BOLT11</span><span>Bazaar</span></div>
-      </div>
-
-      <div class="sys">
-        <span class="no">03</span>
-        <h3>三镜像发布管线</h3>
-        <p class="en">Tri-mirror static delivery</p>
-        <p>同一份内容三个故障域：<b>Netlify CDN 主站</b>（digest 部署，显式 MIME 与 <code>_headers</code> 双保险）、<b>GitHub Pages 冷备</b>、<b>边缘镜像</b>（Workers / Deno）。静态资源零外链、零框架，国内可直连。</p>
-        <div class="stack"><span>file-digest API</span><span>Netlify</span><span>GitHub Pages</span><span>Edge</span></div>
-      </div>
-
-      <div class="sys">
-        <span class="no">04</span>
-        <h3>静默巡检与出口择优</h3>
-        <p class="en">Silent watchdog &amp; egress selection</p>
-        <p>每 30 分钟只看三件事：<b>心跳、磁盘、证书剩余天数</b>；异常才发声。出口侧维护一个<b>并行探测的节点池</b>：多源订阅聚合、批量握手、出口 ASN/地理指纹、六站点可达性矩阵，切换时保持生产链路不中断。</p>
-        <div class="stack"><span>Windows Task Scheduler</span><span>xray-core</span><span>parallel probes</span><span>六站点矩阵</span></div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- now -->
-  <section id="now">
-    <div class="sec-head">
-      <h2>现在</h2>
-      <span class="idx">Now / 2026 Q4</span>
-    </div>
-    <div class="rule"></div>
-    <div class="now">
-      <div class="card">
-        <h3>Building</h3>
-        <p>把推理网关的付费轨做成可被 Agent 自主发现、自主定价、自主结算的服务。</p>
-        <p>当前阶段：<code>discovery metadata</code> 已就位，等待第一批真实调用。</p>
-      </div>
-      <div class="card">
-        <h3>Writing</h3>
-        <p>以"故障即文档"为原则整理手记：每个坑都写成可复现的最小案例。</p>
-        <p>近期主题：SSE 定界、证书整批签发、合成输入与用户在场检测。</p>
-      </div>
-      <div class="card">
-        <h3>Reading</h3>
-        <p>边缘运行时、支付协议、以及"没有身份的软件如何参与经济"。</p>
-        <p>正在看：x402 规范、L402 生态、Agent 间微支付。</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- colophon -->
-  <section id="colophon">
-    <div class="sec-head">
-      <h2>关于这个站</h2>
-      <span class="idx">Colophon</span>
-    </div>
-    <div class="rule"></div>
-    <dl class="kv">
-      <dt>Domain</dt>
-      <dd><b>aronaplana.dynv6.net</b> · <b>aronaplana.is-a.dev</b></dd>
-      <dt>Delivery</dt>
-      <dd>Netlify CDN 主站；GitHub Pages 冷备；Cloudflare Workers 与 Deno Deploy 承载常驻服务</dd>
-      <dt>Build</dt>
-      <dd>手写 HTML/CSS，无前端框架、无外链资源、无追踪脚本</dd>
-      <dt>Typography</dt>
-      <dd>系统字体栈；标题用衬线，正文用无衬线，标注与代码用等宽</dd>
-      <dt>Principle</dt>
-      <dd>轻、稳、少依赖；能自托管就不上第三方；可观测优先于功能数量</dd>
-    </dl>
-  </section>
-
-  <!-- contact -->
-  <section id="contact">
-    <div class="sec-head">
-      <h2>联系</h2>
-      <span class="idx">Contact</span>
-    </div>
-    <div class="rule"></div>
-    <div class="contact">
-      <a href="https://github.com/aronaplana-os"><span class="k">GitHub</span> @aronaplana-os</a>
-      <a href="https://x.com/aronaplana2026"><span class="k">X</span> @aronaplana2026</a>
-      <a href="mailto:aronaplanaos@outlook.com"><span class="k">Email</span> aronaplanaos@outlook.com</a>
-    </div>
-    <div class="pay">
-      <div class="row"><span class="k">Lightning</span><code>aronaplana@coinos.io</code></div>
-      <div class="row"><span class="k">EVM</span><code>0x265A2CD6Bf17fE20FcE68Db5473EA29a1Ac389d1</code></div>
-      <div class="row"><span class="k">Bitcoin</span><code>bc1q9zmgsmg7vw6464wzn4g463t6hfzz4tux3qdta2</code></div>
+    <div class="card">
+      <p style="margin:0;color:var(--fg-dim)">
+        Arona Plana 是一个独立的基础设施实践者。工作范围覆盖推理接入、支付轨道与边缘交付，
+        偏好小规模、可验证、长期可维护的系统。<br><br>
+        <a href="/about/">了解更多 →</a> · <a href="/contact/">联系方式 →</a>
+      </p>
     </div>
   </section>
 
   <footer>
-    <span>© 2026 Arona Plana · 手写 · 无追踪</span>
+    <span>© 2026 Arona Plana</span>
     <span class="alt">
-      <a href="https://aronaplana.is-a.dev">is-a.dev</a>
-      <a href="https://aronaplana-os.github.io/resources/">pages</a>
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
       <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
     </span>
   </footer>
 

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>为智能体设计支付：x402 与 L402 — Arona Plana</title>
+<meta name="description" content="x402 与 L402 的能力边界、验证模型与工程取舍。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/" aria-current="page">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <article class="prose">
+    <div class="kicker">Payments · 2026-10-18</div>
+    <h1>为智能体设计支付：x402 与 L402 的工程取舍</h1>
+    <div class="byline"><span>Arona Plana</span><span>约 6 分钟</span><span>x402 · L402 · settlement</span></div>
+
+    <p>给人类设计支付，核心问题是"如何确认身份"；给软件设计支付，核心问题变成"如何确认意图"。软件没有身份证、没有银行关系，也不该被要求完成一次实名验证才能购买一次推理。两条协议各自回答了这个问题，但答案的形状不同。</p>
+
+    <h2>问题定义</h2>
+    <p>一个按次计费的接口需要同时满足三件事：</p>
+    <ul>
+      <li><b>可验证</b>：服务端能在执行前确认这笔钱确实会到账，或已经到账。</li>
+      <li><b>原子</b>：一次付款对应一次调用，不能出现重复消费，也不能出现付款后无法使用。</li>
+      <li><b>无状态</b>：服务端不维护会话，不假设调用方会在 30 秒后回来。</li>
+    </ul>
+    <p>HTTP 402 提供了一个天然的挂载点：未付款时返回挑战，付款后重放请求。剩下的分歧在于"付款证明"长什么样。</p>
+
+    <h2>x402：把授权签名当作凭据</h2>
+    <p>x402 的 exact 方案要求调用方对一笔转账做一次离链授权（EIP-3009 的 <code>transferWithAuthorization</code>），把签名放进 <code>PAYMENT-SIGNATURE</code> 头。服务端将载荷与自己的 requirements 一起交给 facilitator 校验，校验通过后先服务、再结算。</p>
+    <pre><code>GET  /x402/quote
+     -> 402 Payment Required
+        accepts: [{ scheme:"exact", network:"eip155:8453",
+                    asset:"0x8335...2913", amount:"10000",
+                    payTo:"0x265A...89d1", maxTimeoutSeconds:300 }]
+
+POST /x402/v1/chat/completions
+     PAYMENT-SIGNATURE: base64({ payload, accepted })
+     -> 200 + PAYMENT-RESPONSE: base64({ success, transaction })</code></pre>
+    <p>这个模型的优点是终局性强：结算发生在链上，交易哈希是可独立验证的凭证。代价是它依赖一个 facilitator 角色——校验与提交都需要外部服务，因此 facilitator 的可用性就是系统可用性的一部分。</p>
+
+    <h2>L402：把付款前像当作凭据</h2>
+    <p>L402 走的是另一条路：服务端先开出 BOLT11 发票，调用方付款后获得 preimage，凭 preimage 换取访问权。由于闪电支付是即时的，付款确认与授权可以在同一秒内完成。</p>
+    <p>实现上有一个容易被忽略的细节：如果服务端要求调用方注册账户来核销付款，那就退回到了"账户即授权"。真正无状态的做法是签发一个 HMAC 令牌，把配额与有效期写进令牌本身：</p>
+    <pre><code>GET  /paid/quote                     -> 402 + { invoice, verify_url, receipt }
+GET  /paid/check?receipt=...         -> { settled:true, token, quota:20, ttl_sec:3600 }
+POST /paid/v1/chat/completions
+     Authorization: L402 &lt;token&gt;     -> 200</code></pre>
+    <p>令牌的有效载荷是 <code>{ scope, quota, exp, receipt }</code>，服务端只需要验证签名与过期时间，不需要任何存储。代价是配额无法在服务端撤销——这是无状态与可控性之间的直接交换。</p>
+
+    <h2>两者的边界</h2>
+    <table class="tbl">
+      <tr><th>维度</th><th>x402</th><th>L402</th></tr>
+      <tr><td>最小金额</td><td>受链上手续费约束</td><td>可以低到个位 sats</td></tr>
+      <tr><td>确认延迟</td><td>依赖 facilitator 与出块</td><td>秒级</td></tr>
+      <tr><td>外部依赖</td><td>facilitator</td><td>闪电节点或托管钱包</td></tr>
+      <tr><td>凭证形态</td><td>交易哈希</td><td>preimage + HMAC 令牌</td></tr>
+      <tr><td>适合场景</td><td>单价较高、需要链上审计</td><td>高频微支付、按量计费</td></tr>
+    </table>
+
+    <h2>结论</h2>
+    <p>两条轨道不是替代关系，而是覆盖不同的金额与频率区间。对按次计费的推理接口，合理的组合是：小额高频走 L402，较大金额或需要链上凭证的场景走 x402，两者共享同一套业务逻辑，只在挑战与核销层分叉。</p>
+    <p>更重要的判断是：<b>支付即授权</b>。当凭据本身就是支付证明时，系统就不需要账户体系，也就不需要为机器对手方发明一套它永远无法完成的开户流程。</p>
+
+    <hr>
+    <p><a href="/systems/payments/">→ 机器可支付接口的产品说明</a></p>
+  </article>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

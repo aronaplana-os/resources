@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes — Arona Plana</title>
+<meta name="description" content="工程手记：推理网关、支付轨道与边缘交付的设计与取舍。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/" aria-current="page">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <header class="page-hero">
+    <div class="eyebrow">Notes · 工程手记</div>
+    <h1>写下设计与取舍。</h1>
+    <p class="lede">这里记录系统背后的判断：为什么这样分层、为什么选择这条协议、以及在什么条件下结论会改变。</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>全部手记</h2><span class="idx">03 entries</span></div>
+    <div class="rule"></div>
+    <div class="notes">
+
+      <a class="note" href="/notes/x402-l402/">
+        <time>2026-10-18</time>
+        <div>
+          <h3>为智能体设计支付：x402 与 L402 的工程取舍</h3>
+          <p>两条结算轨道的能力边界、验证模型，以及"支付即授权"对机器对手方的意义。</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+
+      <a class="note" href="/notes/multi-upstream/">
+        <time>2026-10-16</time>
+        <div>
+          <h3>多上游推理网关的路由与熔断设计</h3>
+          <p>优先级队列、退避策略、按提示词体量的模型选择，以及三种返回形态的归一化。</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+
+      <a class="note" href="/notes/edge-delivery/">
+        <time>2026-10-14</time>
+        <div>
+          <h3>三镜像静态交付：故障域、证书与 MIME</h3>
+          <p>同一个站点为什么要部署到三个故障域，以及内容类型与证书签发之间的耦合。</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

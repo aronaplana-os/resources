@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — Arona Plana</title>
+<meta name="description" content="Arona Plana：独立的基础设施实践者，关注推理接入、支付轨道与边缘交付。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/">Notes</a>
+      <a href="/about/" aria-current="page">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <header class="page-hero">
+    <div class="eyebrow">About</div>
+    <h1>Arona Plana</h1>
+    <p class="lede">独立的基础设施实践者。关注推理接入、支付轨道与边缘交付，偏好小规模、可验证、长期可维护的系统。</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>在做什么</h2><span class="idx">Focus</span></div>
+    <div class="rule"></div>
+    <div class="grid3">
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">推理接入</b><br>把异构的模型服务收敛成稳定、可观测的单一端点。</p></div>
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">支付轨道</b><br>让没有账户体系的调用方也能按次结算。</p></div>
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">边缘交付</b><br>多故障域的内容与计算分发，以及静默巡检。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>工作原则</h2><span class="idx">Principles</span></div>
+    <div class="rule"></div>
+    <dl class="kv">
+      <dt>约束优先</dt><dd>先写死不可妥协的边界，再设计系统。上限、窗口、终局性都应该是显式的。</dd>
+      <dt>可观测</dt><dd>每个组件都能回答：在运行吗、在变慢吗、失败会留下什么证据。</dd>
+      <dt>可恢复</dt><dd>任何单一组件失效时，系统应退化而不是崩溃；恢复路径要提前设计。</dd>
+      <dt>少依赖</dt><dd>能用标准库解决的不引入框架；能用协议解决的定不引入平台。</dd>
+    </dl>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>技术栈</h2><span class="idx">Stack</span></div>
+    <div class="rule"></div>
+    <p style="color:var(--fg-dim);margin:0 0 14px;font-size:14px">
+      Python 标准库 · Deno · Cloudflare Workers · 原生 HTML/CSS · x402 · L402 · BOLT11 · EIP-3009
+    </p>
+    <p style="color:var(--mut);margin:0;font-size:14px">
+      工具选择的标准只有一条：能否在不引入额外运维成本的前提下，让系统更容易被验证。
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>联系</h2><span class="idx">Contact</span></div>
+    <div class="rule"></div>
+    <div class="contact">
+      <a href="https://github.com/aronaplana-os"><span class="k">GitHub</span> @aronaplana-os</a>
+      <a href="https://x.com/aronaplana2026"><span class="k">X</span> @aronaplana2026</a>
+      <a href="mailto:aronaplanaos@outlook.com"><span class="k">Email</span> aronaplanaos@outlook.com</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

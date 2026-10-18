@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机器可支付接口 — Arona Plana</title>
+<meta name="description" content="x402 与 L402：面向无账户调用方的按次结算轨道，包含接口、定价与设计说明。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/" aria-current="page">Systems</a>
+      <a href="/notes/">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <header class="page-hero">
+    <div class="eyebrow">System 02 · Settlement</div>
+    <h1>机器可支付接口</h1>
+    <p class="lede">当一个调用方没有账户、没有银行卡、也无法完成实名验证时，它仍然可以为一次推理付费。这是两条为此设计的结算轨道。</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><h2>两条轨道</h2><span class="idx">Rails</span></div>
+    <div class="rule"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:16px">x402 · USDC on Base</h3>
+        <p style="margin:0 0 10px;color:var(--mut);font-size:14px">基于 HTTP 402 的链上结算。调用方签署一次授权，服务端通过 facilitator 校验并结算。</p>
+        <p style="margin:0;font:12px/1.8 var(--mono);color:var(--mut-2)">scheme=exact · network=eip155:8453 · asset=USDC</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:16px">L402 · Lightning</h3>
+        <p style="margin:0 0 10px;color:var(--mut);font-size:14px">基于闪电发票的微支付。付款后凭 preimage 换取一个带配额与有效期的令牌。</p>
+        <p style="margin:0;font:12px/1.8 var(--mono);color:var(--mut-2)">BOLT11 · HMAC token · quota + TTL</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>调用流程</h2><span class="idx">Flow</span></div>
+    <div class="rule"></div>
+    <pre style="background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;font:12.8px/1.8 var(--mono);color:var(--fg-dim);margin:0 0 16px"># x402
+GET  /x402/quote                  -> 402 + PAYMENT-REQUIRED (requirements + invoice/accepts)
+POST /x402/v1/chat/completions    -> PAYMENT-SIGNATURE: &lt;base64 payload&gt;
+                                  -> 200 + PAYMENT-RESPONSE (settlement receipt)
+
+# L402
+GET  /paid/quote                  -> 402 + { invoice, verify_url, receipt }
+GET  /paid/check?receipt=...      -> { settled, token, quota, ttl_sec }
+POST /paid/v1/chat/completions    -> Authorization: L402 &lt;token&gt;</pre>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>接口与定价</h2><span class="idx">Pricing</span></div>
+    <div class="rule"></div>
+    <table class="tbl">
+      <tr><th>轨道</th><th>端点</th><th>单价</th><th>结算</th></tr>
+      <tr><td>x402</td><td><code>POST /x402/v1/chat/completions</code></td><td>0.01 USDC / 次</td><td>链上，经 facilitator</td></tr>
+      <tr><td>L402</td><td><code>POST /paid/v1/chat/completions</code></td><td>2 sats / 次</td><td>闪电网络</td></tr>
+      <tr><td>Free tier</td><td><code>POST /v1/chat/completions</code></td><td>—</td><td>Bearer 认证</td></tr>
+    </table>
+    <div class="callout">
+      <b>设计说明</b>　402 响应同时携带 Bazaar 发现元数据（服务名、标签、输入 schema），
+      使其他智能体可以自动索引并按价格选择服务。
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>为什么是这两条</h2><span class="idx">Rationale</span></div>
+    <div class="rule"></div>
+    <div class="grid3">
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">无账户授权</b><br>持有支付工具本身就是授权凭据，不需要注册与会话。</p></div>
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">原子性</b><br>一次付款对应一次调用，额度与有效期写进令牌，服务端无需保存状态。</p></div>
+      <div class="card"><p style="margin:0;color:var(--mut);font-size:14px"><b style="color:var(--fg)">可审计</b><br>链上交易哈希与闪电 preimage 都是可验证的结算凭证。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>延伸阅读</h2><span class="idx">Notes</span></div>
+    <div class="rule"></div>
+    <div class="notes">
+      <a class="note" href="/notes/x402-l402/">
+        <time>2026-10-18</time>
+        <div><h3>为智能体设计支付：x402 与 L402 的工程取舍</h3><p>验证模型、终局性与实现细节。</p></div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>
