@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x402-deno：付费中间件的三个约束 — Arona Plana</title>
+<meta name="description" content="服务端定价、Deno KV 原子 nonce 预留与 fail-closed 结算：x402 v2 中间件的设计与实现。">
+<meta name="theme-color" content="#0a0b0e">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="brand" href="/">
+      <div class="monogram">AP</div>
+      <div><b>Arona Plana</b><span>infrastructure · ai systems</span></div>
+    </a>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/systems/">Systems</a>
+      <a href="/notes/" aria-current="page">Notes</a>
+      <a href="/about/">About</a>
+      <a href="/contact/">Contact</a>
+    </nav>
+  </div>
+
+  <article class="prose">
+    <div class="kicker">Open source · 2026-10-19</div>
+    <h1>x402-deno：把付费中间件做成一个可安装的包</h1>
+    <div class="byline"><span>Arona Plana</span><span>约 5 分钟</span><span>x402 · Deno · JSR</span></div>
+
+    <p>一个按次付费的端点，难点不在返回 402。难点在于：当请求已经带着一笔有效签名到达，而运行时同时存在多个实例时，谁有权执行这次工作？如果两个实例都算出了结果，只有一个能结算，另一个的算力就是白送的；如果先交付再结算，结算失败时服务已经泄漏。</p>
+
+    <p><code>x402-deno</code> 是把这三个约束写成代码的结果：服务端定价、原子 nonce 预留、结算前不交付。它不依赖框架，也不依赖 npm，只使用 Deno 与 Web API。</p>
+
+    <h2>约束一：价格不能由调用方提交</h2>
+    <p>很多实现会把客户端 <code>PAYMENT-SIGNATURE</code> 里的 <code>accepted</code> 直接当作 <code>paymentRequirements</code> 交给 facilitator。这样调用方可以把金额改成 1 个最小单位，而 facilitator 仍会按这个金额校验。正确做法是价格永远来自服务端配置，客户端提交的字段只用于比对；不一致就直接拒绝。</p>
+
+    <h2>约束二：在执行前预留 nonce</h2>
+    <p>EIP-3009 授权里的 <code>(payer, nonce)</code> 是唯一的。把它和网络、资产一起组成 key，用 Deno KV 的 compare-and-set 在做任何工作之前占位：</p>
+    <pre><code>const commit = await kv.atomic()
+  .check({ key, versionstamp: null })
+  .set(key, { state: "running" }, { expireIn })
+  .commit();
+
+if (!commit.ok) {
+  // 同一签名正在被处理，或已经结算
+  return conflict();
+}</code></pre>
+    <p>只有一个实例能拿到 <code>commit.ok === true</code>。这不是限流，而是把“谁有权服务”变成一个可审计的竞争结果。</p>
+
+    <h2>约束三：结算成功才释放结果</h2>
+    <p>推理结果先写入缓冲，然后调用 facilitator 的 <code>/settle</code>。只有拿到一个合法的链上交易哈希，才把缓冲结果返回给调用方。状态机是显式的：</p>
+    <ul>
+      <li><b>running</b>：已占位，正在执行。</li>
+      <li><b>settling</b>：结果已写入，结算请求在途；此时重试不会再次执行推理。</li>
+      <li><b>settled</b>：交易哈希已记录，后续同一签名的重试直接重放已缓存的结果。</li>
+      <li><b>uncertain / failed</b>：结果未知时保留占位并 fail closed；明确失败时释放占位，允许调用方重试。</li>
+    </ul>
+    <p>如果进程在 <code>/settle</code> 成功后、写入 <code>settled</code> 前死亡，链上 nonce 已经被消耗，下一次 <code>/verify</code> 会拒绝同一授权——重复的是算力，不是扣款。</p>
+
+    <h2>安装</h2>
+    <pre><code>import { createX402Middleware } from "jsr:@aronaplana-os/x402-deno";
+
+const paid = createX402Middleware({
+  kv: await Deno.openKv(),
+  payTo: Deno.env.get("X402_PAY_TO")!,
+  publicUrl: "https://api.example.com/v1/chat/completions",
+  facilitatorBaseUrl: "https://facilitator.payai.network",
+  handler: inferenceHandler,
+});</code></pre>
+    <p>当前价格固定为 0.01 USDC（Base 主网，<code>eip155:8453</code>）。如果需要不同价格，修改文件顶部的 <code>AMOUNT</code> 常量；多价格场景应当为每个路由组合一个独立的中间件实例，而不是在运行时拼接 requirements。</p>
+
+    <h2>限制</h2>
+    <ul>
+      <li><b>不支持流式</b>：结果必须在结算前完整缓冲。付费输出在结算前逐 token 泄漏，不是这个模型愿意接受的取舍。</li>
+      <li><b>单一价格、单一网络</b>：当前版本刻意不把 requirements 做成动态对象，避免校验与配置漂移。</li>
+      <li><b>信任 facilitator</b>：验证与结算被委托给外部服务，facilitator 的可用性就是端点可用性的一部分。</li>
+      <li><b>不是安全审计</b>：这是一个可读、可测试的集成实现，不是经过审计的支付系统。</li>
+    </ul>
+
+    <p>代码与测试在 <a href="https://github.com/aronaplana-os/x402-deno">GitHub</a>，包在 <a href="https://jsr.io/@aronaplana-os/x402-deno">JSR</a>。MIT。</p>
+  </article>
+
+  <footer>
+    <span>© 2026 Arona Plana</span>
+    <span class="alt">
+      <a href="/systems/">systems</a>
+      <a href="/notes/">notes</a>
+      <a href="/about/">about</a>
+      <a href="https://github.com/aronaplana-os">github</a>
+      <a href="https://x.com/aronaplana2026">x</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>
